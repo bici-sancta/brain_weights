@@ -1,0 +1,168 @@
+---
+title: "brain weights"
+author: "mcdevitt"
+date: "09 avr 2017"
+output:
+  html_document:
+    highlight: tango
+    theme: united
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+
+```
+
+### Homework 12 - Problem Set 2 - Brain weights
+
+```{r brains}
+
+home_dir <- "~/_smu/_src/brain_weights/"
+setwd(home_dir)
+data_dir <- "./data"
+setwd(data_dir)
+
+brains <- read.csv("case0902.csv", stringsAsFactors = FALSE)
+
+setwd(home_dir)
+
+names(brains) <- tolower(names(brains))
+brains$species <- as.factor(brains$species)
+
+brains$log_brain <- log(brains$brain)
+brains$log_body <- log(brains$body)
+brains$log_litter <- log(brains$litter)
+brains$log_gestation <- log(brains$gestation)
+
+```
+
+***  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+### __Step 1 - Plot the data__  
+
+```{r}
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	basic plot of data sets
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+brains$body_group <- cut(brains$log_body, c(-Inf, -2, 0, 2, 4, 6, Inf))
+levels(brains$body_group) <- c("<-2", "-2t0", "0-2", "2-4", "4-6", "6+")
+
+p <- ggplot(brains, aes(body, brain))
+p + geom_point(aes(color = factor(body_group)))
+
+p <- ggplot(brains, aes(log_body, log_brain))
+p + geom_point(aes(color = factor(body_group)))
+
+p <- ggplot(brains, aes(log_litter, log_brain))
+p + geom_point(aes(color = factor(body_group)))
+
+p <- ggplot(brains, aes(log_gestation, log_brain))
+p + geom_point(aes(color = factor(body_group)))
+
+```
+
+
+***  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+### __Steps 2 & 3:  Build a model & Fit the model__  
+
+```{r}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	linear model
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+fit_1 = lm(log_brain ~ log_litter + log_gestation + body_group, data = brains)
+
+summary(fit_1)
+
+pred_1 = data.frame(x = brains$log_litter, y = predict(fit_1, brains), body_group = brains$body_group)
+
+ggplot(brains) +
+	geom_point(aes(log_litter, log_brain, color = body_group)) +
+	geom_line(data = pred_1, aes(x, y, color = body_group))
+
+pred_2 = data.frame(x = brains$log_gestation, y = predict(fit_1, brains), body_group = brains$body_group)
+ggplot(brains) +
+	geom_point(aes(log_gestation, log_brain, color = body_group)) +
+	geom_line(data = pred_2, aes(x, y, color = body_group))
+```
+
+***  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+#### __Step 4: Provide a residual plot, studentized residual plot, histogram of residuals and qq plot of residuals__  
+
+```{r}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	residuals vs. fitted values
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+library(broom)
+df <- augment(fit_1)
+ggplot(df, aes(x = .fitted, y = .resid)) + geom_point()
+
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	Studentized residuals
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+library(MASS)
+sresid <- studres(fit_1)
+
+hist(sresid, freq = FALSE,
+   main="Distribution of Studentized Residuals")
+
+
+
+
+```
+
+***  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+#### __Step 5: if the fit assessed in Step 4 is sufficient, interpret each coefficient in the model.__  
+
+The model accounts for six different grouping of body size.  
+For body size grouping as follows :  
+A - log(size) < -2 --> size < 0.14 grams  
+B - log(size) -2-0 --> size < 1.0 grams  
+C - log(size) 0-2 --> size  < 7.39 grams  
+D - log(size) 2-4 --> size  < 54.6 grams  
+E - log(size) 4-6 --> size  < 403 grams  
+F - log(size) 6+ -->  size  > 403 grams  
+
+Then interpretation of model for each body group size is as follows :  
+
+A	brain size = 	litter^0.89 * gestation^1.95  
+B	brain size = 	0.33	* litter^0.89 * gestation^1.95  
+C	brain size = 	1.60	* litter^0.89 * gestation^1.95  
+D	brain size = 	3.94	* litter^0.89 * gestation^1.95  
+E	brain size = 	9.68	* litter^0.89 * gestation^1.95  
+F	brain size = 	17.12	* litter^0.89 * gestation^1.95  
+  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+
+#### BONUS 1pt:  How many degrees of freedom were used to estimate the error term (MSE)? 
+#### BONUS 1pt:  What is the estimate of the MSE?  
+
+***  
+
+#### __Residual standard error: 0.51 on 87 degrees of freedom__  
+
+***  
+***  
+
+#### ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-  
+end-of-document  
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-  
